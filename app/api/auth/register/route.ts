@@ -142,7 +142,7 @@ export async function POST(req: Request) {
       referralCode = generateReferralCode(username);
     }
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
           name: username,
