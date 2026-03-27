@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const rejectionReason = reason || "Retiro rechazado por administración";
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const updatedWithdrawal = await tx.withdrawal.update({
         where: { id: withdrawal.id },
         data: {
