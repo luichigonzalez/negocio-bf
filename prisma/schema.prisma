@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  username     String? @unique
+  email        String  @unique
+  passwordHash String
+
+  referralCode             String  @unique
+  referredById             String?
+  sponsorPromoterProfileId String?
+
+  isActive         Boolean @default(false)
+  availableBalance Float   @default(0)
+  lockedBalance    Float   @default(0)
+
+  referredBy User?  @relation("UserReferral", fields: [referredById], references: [id])
+  referrals  User[] @relation("UserReferral")
+
+  promoterProfile PromoterProfile?
+  promoterOrders  PromoterOrder[]  @relation("UserPromoterOrders")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referredById])
+  @@index([sponsorPromoterProfileId])
+}
+
+model PromoterProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  name         String?
+  username     String?
+  email        String?
+  referralCode String? @unique
+
+  sponsorPromoterProfileId String?
+  sponsor                  PromoterProfile?  @relation("PromoterSponsor", fields: [sponsorPromoterProfileId], references: [id])
+  directReferrals          PromoterProfile[] @relation("PromoterSponsor")
+
+  membershipActive Boolean @default(false)
+  membershipStatus String  @default("PENDING")
+  canAccessPanel   Boolean @default(false)
+  canEarn          Boolean @default(false)
+
+  isCycleUnlocked Boolean @default(false)
+  cycleUnlocked   Boolean @default(false)
+
+  directReferralCount  Int @default(0)
+  directReferralsCount Int @default(0)
+
+  activeLevel       Int @default(1)
+  activeCycle       Int @default(1)
+  activeCycleLevel  Int @default(1)
+  activeCycleNumber Int @default(1)
+  cycleLevel        Int @default(1)
+  cycleNumber       Int @default(1)
+
+  walletBalance       Float @default(0)
+  earningsBalance     Float @default(0)
+  availableBalance    Float @default(0)
+  totalDirectEarnings Float @default(0)
+  totalEarnings       Float @default(0)
+  totalWithdrawn      Float @default(0)
+
+  activatedAt        DateTime?
+  licenseActivatedAt DateTime?
+  completedLevel10At DateTime?
+  lastOrderId        String?
+
+  usdtAddress         String?
+  usdtNetwork         String? @default("TRC20")
+  isUsdtAddressLocked Boolean @default(false)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          PromoterOrder[]
+  walletMovements WalletMovement[]
+  cycleNodes      CycleNode[]
+  withdrawals     Withdrawal[]
+
+  directReferralLinks DirectReferral[] @relation("DirectReferralSponsor")
+  referredByLinks     DirectReferral[] @relation("DirectReferralReferred")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([username])
+  @@index([referralCode])
+  @@index([sponsorPromoterProfileId])
+}
+
+model PromoterOrder {
+  id                String  @id @default(uuid())
+  userId            String
+  promoterProfileId String?
+
+  amount    Float  @default(25)
+  netAmount Float  @default(0)
+  currency  String @default("USDT")
+  network   String @default("TRC20")
+
+  status        String @default("PENDING")
+  paymentStatus String @default("PENDING")
+
+  externalPaymentId String?
+  txHash            String?
+
+  paidAt               DateTime?
+  cycleProcessedAt     DateTime?
+  cyclePlacementStatus String?
+  cyclePlacementMeta   Json?
+
+  user            User             @relation("UserPromoterOrders", fields: [userId], references: [id], onDelete: Cascade)
+  promoterProfile PromoterProfile? @relation(fields: [promoterProfileId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([promoterProfileId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([externalPaymentId])
+}
+
+model WalletMovement {
+  id                String @id @default(uuid())
+  promoterProfileId String
+
+  type        String
+  amount      Float
+  currency    String  @default("USDT")
+  status      String  @default("COMPLETED")
+  description String?
+  referenceId String?
+  meta        Json?
+
+  promoterProfile PromoterProfile @relation(fields: [promoterProfileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([promoterProfileId])
+  @@index([type])
+  @@index([referenceId])
+}
+
+model Withdrawal {
+  id                String @id @default(uuid())
+  promoterProfileId String
+
+  amount        Float
+  currency      String  @default("USDT")
+  network       String  @default("TRC20")
+  walletAddress String
+  status        String  @default("PENDING")
+
+  autoProcess    Boolean @default(false)
+  reviewRequired Boolean @default(true)
+
+  externalPayoutId        String?
+  providerWithdrawalId    String?
+  providerBatchId         String?
+  providerStatus          String?
+  providerError           String?
+  txHash                  String?
+  approvedAt              DateTime?
+  processedAt             DateTime?
+  paidAt                  DateTime?
+  rejectedAt              DateTime?
+  rejectionReason         String?
+  lastWebhookAt           DateTime?
+
+  meta              Json?
+  providerResponse  Json?
+  lastWebhookPayload Json?
+
+  promoterProfile PromoterProfile @relation(fields: [promoterProfileId], references: [id], onDelete: Cascade)
+  audits          WithdrawalAudit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([promoterProfileId])
+  @@index([status])
+  @@index([externalPayoutId])
+  @@index([providerWithdrawalId])
+  @@index([providerBatchId])
+  @@index([providerStatus])
+  @@index([createdAt])
+}
+
+model WithdrawalAudit {
+  id           String @id @default(uuid())
+  withdrawalId String
+
+  action     String
+  statusFrom String?
+  statusTo   String?
+  note       String?
+  payload    Json?
+
+  withdrawal Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([withdrawalId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model DirectReferral {
+  id                        String @id @default(uuid())
+  sponsorPromoterProfileId  String
+  referredPromoterProfileId String
+  status                    String @default("ACTIVE")
+
+  sponsor  PromoterProfile @relation("DirectReferralSponsor", fields: [sponsorPromoterProfileId], references: [id], onDelete: Cascade)
+  referred PromoterProfile @relation("DirectReferralReferred", fields: [referredPromoterProfileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sponsorPromoterProfileId, referredPromoterProfileId])
+  @@index([sponsorPromoterProfileId])
+  @@index([referredPromoterProfileId])
+}
+
+model CycleNode {
+  id                String @id @default(uuid())
+  promoterProfileId String
+
+  level Int
+  cycle Int
+
+  parentNodeId                 String?
+  status                       String  @default("ACTIVE")
+  source                       String  @default("DIRECT")
+  sponsoredByPromoterProfileId String?
+
+  promoterProfile PromoterProfile @relation(fields: [promoterProfileId], references: [id], onDelete: Cascade)
+  parent          CycleNode?      @relation("CycleNodeTree", fields: [parentNodeId], references: [id], onDelete: SetNull)
+  children        CycleNode[]     @relation("CycleNodeTree")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([promoterProfileId])
+  @@index([level, cycle])
+  @@index([parentNodeId])
+  @@index([status])
+  @@index([sponsoredByPromoterProfileId])
+}
