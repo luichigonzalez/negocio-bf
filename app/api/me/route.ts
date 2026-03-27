@@ -5,6 +5,13 @@ import { prisma } from "@/app/lib/prisma";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type ReferralItem = {
+  id: string;
+  name: string | null;
+  email: string;
+  createdAt: Date;
+};
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -78,7 +85,7 @@ export async function GET() {
           }
         : null,
       directCount: user.referrals.length,
-      referrals: user.referrals.map((ref) => ({
+      referrals: user.referrals.map((ref: ReferralItem) => ({
         id: ref.id,
         username: ref.name,
         email: ref.email,
