@@ -4,6 +4,40 @@ import { prisma } from "@/app/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type AdminWithdrawalListItem = {
+  id: string;
+  amount: number;
+  currency: string;
+  network: string;
+  walletAddress: string;
+  status: string;
+  autoProcess: boolean;
+  reviewRequired: boolean;
+  externalPayoutId: string | null;
+  providerWithdrawalId: string | null;
+  providerBatchId: string | null;
+  providerStatus: string | null;
+  providerError: string | null;
+  txHash: string | null;
+  approvedAt: Date | null;
+  processedAt: Date | null;
+  paidAt: Date | null;
+  rejectedAt: Date | null;
+  rejectionReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  promoterProfile: {
+    id: string;
+    userId: string;
+    name: string | null;
+    username: string | null;
+    email: string | null;
+    usdtAddress: string | null;
+    usdtNetwork: string | null;
+    isUsdtAddressLocked: boolean;
+  } | null;
+};
+
 function parsePositiveInt(value: string | null, fallback: number) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return fallback;
@@ -57,7 +91,7 @@ export async function GET(req: NextRequest) {
       pageSize,
       total,
       totalPages: Math.ceil(total / pageSize),
-      withdrawals: withdrawals.map((item) => ({
+      withdrawals: withdrawals.map((item: AdminWithdrawalListItem) => ({
         id: item.id,
         amount: item.amount,
         currency: item.currency,
