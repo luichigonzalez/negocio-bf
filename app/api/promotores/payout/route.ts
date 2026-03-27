@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     const autoProcess = amount <= AUTO_PAYOUT_LIMIT;
     const status = autoProcess ? "AUTO_READY" : "PENDING";
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.promoterProfile.updateMany({
         where: {
           id: profile.id,
